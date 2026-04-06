@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Norte Distribuidora</title>
+
+<style>
+:root {
+    --azul:#2f5d86;
+    --vermelho:#c62828;
+    --branco:#ffffff;
+    --cinza:#f4f6f8;
+}
+
+body {
+    margin:0;
+    font-family:'Segoe UI', sans-serif;
+    background:var(--cinza);
+}
+
+header {
+    background: linear-gradient(135deg,var(--azul),#1e3a5f);
+    color:white;
+    padding:20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+}
+
+.logo {
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.logo img {
+    height:60px;
+}
+
+nav a {
+    color:white;
+    margin:0 10px;
+    text-decoration:none;
+    font-weight:bold;
+}
+
+nav a:hover {
+    color:var(--vermelho);
+}
+
+.hero {
+    background: linear-gradient(135deg,var(--azul) 60%, var(--vermelho));
+    color:white;
+    padding:60px 20px;
+    text-align:center;
+}
+
+.hero h1 {
+    font-size:36px;
+    margin-bottom:10px;
+}
+
+.container {
+    max-width:1200px;
+    margin:auto;
+    padding:20px;
+}
+
+.products {
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:20px;
+}
+
+.card {
+    background:white;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+    transition:0.3s;
+}
+
+.card:hover {
+    transform:translateY(-5px);
+}
+
+.card img {
+    width:100%;
+    height:180px;
+    object-fit:cover;
+}
+
+.card h4 {
+    padding:10px;
+}
+
+.card button {
+    margin:10px;
+    width:calc(100% - 20px);
+    background:var(--vermelho);
+    color:white;
+    border:none;
+    padding:10px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.card button:hover {
+    background:#a81d1d;
+}
+
+.admin {
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    background:var(--azul);
+    color:white;
+    padding:10px 15px;
+    border-radius:50px;
+    cursor:pointer;
+}
+
+#loginBox, #adminPanel {
+    display:none;
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.2);
+    width:300px;
+}
+
+input, select {
+    width:100%;
+    padding:8px;
+    margin:5px 0;
+}
+
+button {
+    width:100%;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+<div class="logo">
+<img src="img/logo.png">
+<h2>Norte Distribuidora</h2>
+</div>
+<nav>
+<a href="#">Início</a>
+<a href="#">Produtos</a>
+<a href="#">Contato</a>
+</nav>
+</header>
+
+<section class="hero">
+<h1>Ferramentas e Máquinas Profissionais</h1>
+<p>Qualidade, confiança e o melhor preço da região</p>
+</section>
+
+<div class="container">
+<div class="products" id="products"></div>
+</div>
+
+<div class="admin" onclick="mostrarLogin()">Admin</div>
+
+<div id="loginBox">
+<h3>Login</h3>
+<input id="email" placeholder="Email">
+<input id="senha" type="password" placeholder="Senha">
+<button onclick="login()">Entrar</button>
+</div>
+
+<div id="adminPanel">
+<h3>Cadastrar Produto</h3>
+<input id="nome" placeholder="Nome">
+<input type="file" id="file">
+<select id="categoria">
+<option value="ferramentas">Ferramentas</option>
+<option value="adesivos">Adesivos</option>
+</select>
+<button onclick="addProduto()">Cadastrar</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAu5gIF2BBR6boxJ6mJIjMV71CbD-Ey0zk",
+  authDomain: "norte-distribuidora.firebaseapp.com",
+  projectId: "norte-distribuidora",
+  storageBucket: "norte-distribuidora.firebasestorage.app",
+  messagingSenderId: "225983951384",
+  appId: "1:225983951384:web:291a7b6096f11194e8096d"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+function login(){
+firebase.auth().signInWithEmailAndPassword(email.value, senha.value)
+.then(()=>{
+adminPanel.style.display='block';
+loginBox.style.display='none';
+});
+}
+
+function mostrarLogin(){
+loginBox.style.display='block';
+}
+
+function uploadImagem(file){
+let ref = storage.ref('produtos/' + Date.now() + file.name);
+return ref.put(file).then(()=> ref.getDownloadURL());
+}
+
+function addProduto(){
+let file = fileInput = document.getElementById('file').files[0];
+if(!file) return alert('Selecione imagem');
+
+uploadImagem(file).then(url=>{
+ db.collection('produtos').add({
+ nome: nome.value,
+ imagem: url,
+ categoria: categoria.value
+ });
+});
+}
+
+let lista = [];
+db.collection('produtos').onSnapshot(snapshot=>{
+lista=[];
+snapshot.forEach(doc=>{
+lista.push(doc.data());
+});
+render(lista);
+});
+
+function render(data){
+let html='';
+data.forEach(p=>{
+html+=`
+<div class="card">
+<img src="${p.imagem}">
+<h4>${p.nome}</h4>
+<button onclick="comprar('${p.nome}')">WhatsApp</button>
+</div>`;
+});
+products.innerHTML = html;
+}
+
+function comprar(nome){
+window.open(`https://wa.me/5594981590065?text=Olá, tenho interesse no produto ${nome}`);
+}
+</script>
+
+</body>
+</html>
